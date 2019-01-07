@@ -18,6 +18,16 @@ CanvasRenderingContext2D.prototype.clearCompletely = function() {
 	this.clearRect(0, 0, this.canvas.width, this.canvas.height);
 }
 
+CanvasRenderingContext2D.prototype.lineFromTo = function(obj1, obj2, style) {
+	this.beginPath();
+	this.moveTo(obj1.x, obj1.y);
+	this.lineTo(obj2.x, obj2.y);
+	this.closePath();
+
+	this.strokeStyle = style;
+	this.stroke();
+}
+
 const mv = {
 	PI: Math.PI,
 	doublePI: Math.PI * 2,
@@ -37,10 +47,10 @@ window.addEventListener("load", () => {
 	};
 
 	let canvas = document.createDOMElem("canvas", 
-															{ class: canvasConfig.class, 
-																width: canvasConfig.w, 
-																height: canvasConfig.h,
-																style: `background: ${canvasConfig.bg}` }),
+																			{ class: canvasConfig.class, 
+																				width: canvasConfig.w, 
+																				height: canvasConfig.h,
+																				style: `background: ${canvasConfig.bg}` }),
 			wrapper	=	document.querySelector(".page-wrapper");
 
 	let resizeCanvas = () => {	// set config values to canvas size
@@ -98,61 +108,6 @@ window.addEventListener("load", () => {
 	}
 		/* ----------------------- */
 
-		/* CANVAS CURSOR CLASS */
-  class Cursor extends canvasObject {
-		constructor(area, { x, y, color, sBlur, sColor, radius }) {
-			super({
-				s_x: x,
-				s_y: y,
-				s_c: color,
-				s_sb: sBlur,
-				s_sc: sColor,
-				s_r: radius
-			});
-
-			this.area = area;
-
-			this.ix = x; 	// initial x
-			this.iy = y; 	// initial y
-
-			this.onmove = null;
-		}
-
-		update({x, y}) {
-			this.x = x;
-			this.y = y;
-		}
-
-		init() {
-			this.area.canvas.style.cursor = "none";
-
-			this.area.canvas.addEventListener("mousemove", (evt) => {
-				cursor.clear();
-				cursor.update({
-					x: evt.offsetX,
-					y: evt.offsetY 
-				});
-
-				if (this.onmove) {
-					this.onmove.call(this);
-				}
-
-				cursor.draw();
-			});			
-		}
-	}
-		/* ------------------- */	
-
-	let cursor = new Cursor(ctx, {
-		x: ~~(canvasConfig.w / 2),
-		y: ~~(canvasConfig.h / 2),
-		color: "rgba(255, 255, 255, 1)",
-		radius: 6,
-		sBlur: 10,
-		sColor: "#fff"
-	});
-	cursor.init();
-
 	let particleConfig = {
 		r: 8,	 // radius
 		s: 1.9,	 // speed
@@ -199,23 +154,6 @@ window.addEventListener("load", () => {
 			[this.area.fillStyle, this.area.shadowColor, this.area.shadowBlur] = [this.color, this.sc, this.sb];
 		}
 
-		clear() {
-			this.area.clearRect(this.x - this.radius - this.sb,
-													this.y - this.radius - this.sb,
-													this.radius * 2 + this.sb * 2,
-													this.radius * 2 + this.sb * 2);
-		}
-
-		draw() {
-			this.area.beginPath();
-			this.area.moveTo(this.x, this.y);
-			this.area.arc(this.x, this.y, this.radius, 0, mv.doublePI, true);
-			this.area.closePath();
-
-			this.setAreaStyle();
-			this.area.fill();
-		}
-
 		update() {
 			this.x += this.speed * this.xdm;
 			this.y += this.speed * this.ydm;
@@ -245,13 +183,12 @@ window.addEventListener("load", () => {
 
 		/* PARTICLES COLLECTION CLASS */
 	class ParticlesCollection {
-		constructor(particlesArea, particlesNumber, particlesTarget) {
+		constructor(particlesArea, particlesNumber) {
 			this.pa = particlesArea;	// particles area
-			this.pt = particlesTarget;	// particles target
 			this.storage = [];
 			this.length = particlesNumber;
 
-			this.pbd = Math.max( particlesNumber * 3.9, 95 );	// distance for particles bind
+			this.pbd = Math.max( particlesNumber * 3.5, 110 );	// distance for particles bind
 
 			this.fillStorage();
 		}
@@ -289,7 +226,7 @@ window.addEventListener("load", () => {
 		}
 
 		clearParticles() {
-			this.storage.forEach( p => p.clear() );
+			this.pa.clearCompletely();
 		}
 		
 		drawParticles() {
@@ -300,53 +237,38 @@ window.addEventListener("load", () => {
 			this.storage.forEach( p => p.update() );
 		}
 
-		lineFromTo(obj1, obj2) {
-			this.pa.beginPath();
-			this.pa.moveTo(obj1.x, obj1.y);
-			this.pa.lineTo(obj2.x, obj2.y);
-			this.pa.closePath();
+		lineFromTo(obj1, obj2, style) {
+			this.beginPath();
+			this.moveTo(obj1.x, obj1.y);
+			this.lineTo(obj2.x, obj2.y);
+			this.closePath();
 
-			this.pa.strokeStyle = "#fff";
-			this.pa.stroke();
+			this.strokeStyle = style;
+			this.stroke();
 		}
 
 		bindParticles(distance) {
 			let s = this.storage; // storage
 
 			for (let i = 0; i < s.length; i++) {
-				for (let k = 0; k < s.length; k++ ) {
-					if (k == i) continue;
+				let bindWith = s.filter( p => { // filter by distance between two particles
+					let distanceVector = new Vector(p.x - s[i].x,	// Vector connecting two particles
+																					p.y - s[i].y);
 
-					let distanceVector = new Vector(s[k].x - s[i].x,	// Vector connecting two particles
-																					s[k].y - s[i].y); 
+					return distanceVector.length <= distance;																
+				} );
 
-					if ( distanceVector.length <= distance ) {
-						this.lineFromTo(s[i], s[k]);
-					} else continue;	
+				for (let k = 0; k < bindWith.length; k++) {
+					this.pa.lineFromTo(s[i], bindWith[k], "#fff");
 				}
 			}
 		}
 
-		bindWithTarget(distance) {
-			let t = this.pt;
-
-			this.storage.forEach( p => {
-				let distanceVector = new Vector(p.x - t.x,	// Vector connecting particle with a target
-																				p.y - t.y); 
-
-				if ( distanceVector.length <= distance ) {
-					this.lineFromTo(p, t);
-				}		
-			});		
-		}
-
 		actionLoop() {
-			this.pa.clearCompletely();
-			this.pt.draw();
+			this.clearParticles();
 			this.updateParticles();
 			this.drawParticles();
 			this.bindParticles(this.pbd);
-			this.bindWithTarget(100);
 			
 			requestAnimationFrame( this.actionLoop.bind(this) );
 		}
@@ -355,7 +277,7 @@ window.addEventListener("load", () => {
 
 	let particlesN = ~~(canvasConfig.w / 59); 
 
-	let collection = new ParticlesCollection(ctx, Math.max( particlesN, 15 ), cursor);
+	let collection = new ParticlesCollection( ctx, Math.max( particlesN, 15 ) );
 	requestAnimationFrame( collection.actionLoop.bind(collection) );
 });
 
