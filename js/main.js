@@ -277,7 +277,7 @@ window.addEventListener("load", () => {
 
 	let particlesN = ~~(canvasConfig.w / 59); 
 
-	let collection = new ParticlesCollection( ctx, Math.max( particlesN, 15 ) );
+	let collection = new ParticlesCollection( ctx, Math.max( particlesN, 9 ) );
 	requestAnimationFrame( collection.actionLoop.bind(collection) );
 });
 
