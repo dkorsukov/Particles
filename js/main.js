@@ -24,6 +24,8 @@ CanvasRenderingContext2D.prototype.lineFromTo = function(obj1, obj2, style) {
 	this.lineTo(obj2.x, obj2.y);
 	this.closePath();
 
+	this.shadowBlur = 1;
+	this.strokeWidth = 1;
 	this.strokeStyle = style;
 	this.stroke();
 }
