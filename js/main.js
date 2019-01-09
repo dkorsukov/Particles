@@ -1,3 +1,5 @@
+"use strict";
+
 /* -----HELPERS----- */
 
 document.createDOMElem = function(tag, attrs) {
@@ -14,19 +16,23 @@ document.createDOMElem = function(tag, attrs) {
 	}	
 }
 
+Element.prototype.hasClass = function(cls) {
+	return !!~Array.prototype.indexOf.call(this.classList, cls);
+}
+
 CanvasRenderingContext2D.prototype.clearCompletely = function() {
 	this.clearRect(0, 0, this.canvas.width, this.canvas.height);
 }
 
-CanvasRenderingContext2D.prototype.lineFromTo = function(obj1, obj2, style) {
+CanvasRenderingContext2D.prototype.lineFromTo = function(obj1, obj2, width, color) {
 	this.beginPath();
 	this.moveTo(obj1.x, obj1.y);
 	this.lineTo(obj2.x, obj2.y);
 	this.closePath();
 
-	this.shadowBlur = 1;
-	this.strokeWidth = 1;
-	this.strokeStyle = style;
+	this.shadowBlur = 0;
+	this.lineWidth = width;
+	this.strokeStyle = color;
 	this.stroke();
 }
 
@@ -111,21 +117,20 @@ window.addEventListener("load", () => {
 		/* ----------------------- */
 
 	let particleConfig = {
-		r: 8,	 // radius
-		s: 1.9,	 // speed
-		acc: 0.65,	// acceleration
+		minR: 3.5,	// min radius
+		maxR: 7,	 // max radius
+		s: 3,	 // speed
+		maxAcc: 1.5,	 // max acceleration
 		maxS: 7,	// max speed
-		sb: 11,	 // shadow blur
-		colors: [	 // list of possible colors
-			"#12D800",
-			"#B8860B",
-			"#9400D3",
-			"#008000",
-			"#4682B4",
-			"#FF6347",
-			"#663399"
-		]
+		sb: 7,	 // shadow blur
+		colors: [	 // colors list
+			"#FFFFFF"
+		],
+		lw: 0.1,	// width of binding line
+		lc: "#FFFFFF"	 // color of binding line
 	};
+
+	let rainbowColors = ["#FF6347", "#FF8C00", "#EDFF2F", "#008000", "#ADD8E6", "#1E90FF", "#BE52BE"];
 
 		/* SINGLE PARTICLE CLASS */
 	class Particle extends canvasObject {
@@ -153,30 +158,33 @@ window.addEventListener("load", () => {
 		}
 
 		setAreaStyle() {
-			[this.area.fillStyle, this.area.shadowColor, this.area.shadowBlur] = [this.color, this.sc, this.sb];
+			[this.area.fillStyle, 
+			 this.area.shadowColor, 
+			 this.area.shadowBlur] = [this.color, this.sc, this.sb];
 		}
 
 		update() {
 			this.x += this.speed * this.xdm;
 			this.y += this.speed * this.ydm;
 
-			if (this.x < this.radius + this.sb) {
+				// switch direction and increase speed if particle abroad canvas
+			if (this.x < this.radius + this.sb) {  // left side
 				this.xdm = 1;
 				this.speed += this.acceleration;
-			} else if (this.x > this.area.canvas.width - this.radius - this.sb) {
+			} else if (this.x > this.area.canvas.width - this.radius - this.sb) {  // right side
 				this.xdm = -1;
 				this.speed += this.acceleration;
 			}
 
-			if (this.y < this.radius + this.sb) {
+			if (this.y < this.radius + this.sb) {	 // top side
 				this.ydm = 1;
 				this.speed += this.acceleration;
-			} else if (this.y > this.area.canvas.height - this.radius - this.sb) {
+			} else if (this.y > this.area.canvas.height - this.radius - this.sb) {	// bottom side
 				this.ydm = -1;
 				this.speed += this.acceleration;
 			}
 
-			if (this.speed >= this.maxSpeed) {
+			if (this.speed >= this.maxSpeed) {	// reset speed
 				this.speed = this.ispeed;
 			}
 		}
@@ -190,13 +198,15 @@ window.addEventListener("load", () => {
 			this.storage = [];
 			this.length = particlesNumber;
 
-			this.pbd = Math.max( particlesNumber * 3.5, 110 );	// distance for particles bind
+			this.pbd = Math.max( particlesNumber * 3.5, 1e2 );	// distance for particles bind
 
 			this.fillStorage();
+
+			this.loop = null;
 		}
 
 		fillStorage() {
-			let pcr = particleConfig.r,	 // radius from particle config
+			let pcr = particleConfig.maxR,	 // max radius from particle config
 					doublePCR = 2 * pcr;
 
 			for (let i = 1; i <= this.length; i++) {
@@ -210,8 +220,8 @@ window.addEventListener("load", () => {
 					sBlur: particleConfig.sb,
 					speed: particleConfig.s,
 					maxSpeed: Math.ceil( Math.random() * (particleConfig.maxS - particleConfig.s) + particleConfig.s ),
-					acceleration: particleConfig.acc,
-					radius: particleConfig.r
+					acceleration: Math.random() * (particleConfig.maxAcc - 0.5) + 0.5,
+					radius: Math.random() * ( pcr - particleConfig.minR ) + particleConfig.minR,
 				});
 
 				this.storage.push(tempParticle);
@@ -239,14 +249,8 @@ window.addEventListener("load", () => {
 			this.storage.forEach( p => p.update() );
 		}
 
-		lineFromTo(obj1, obj2, style) {
-			this.beginPath();
-			this.moveTo(obj1.x, obj1.y);
-			this.lineTo(obj2.x, obj2.y);
-			this.closePath();
-
-			this.strokeStyle = style;
-			this.stroke();
+		freeze() {
+			cancelAnimationFrame(this.loop);
 		}
 
 		bindParticles(distance) {
@@ -261,26 +265,173 @@ window.addEventListener("load", () => {
 				} );
 
 				for (let k = 0; k < bindWith.length; k++) {
-					this.pa.lineFromTo(s[i], bindWith[k], "#fff");
+					this.pa.lineFromTo(s[i], bindWith[k], particleConfig.lw, particleConfig.lc);
 				}
 			}
 		}
 
-		actionLoop() {
+		requestActionFrame() {
 			this.clearParticles();
 			this.updateParticles();
 			this.drawParticles();
 			this.bindParticles(this.pbd);
 			
-			requestAnimationFrame( this.actionLoop.bind(this) );
+			this.loop = requestAnimationFrame( this.requestActionFrame.bind(this) );
+		}
+
+		requestActionLoop() {
+			requestAnimationFrame( collection.requestActionFrame.bind(this) );
 		}
 	}	
 		/* -------------------------- */
 
-	let particlesN = ~~(canvasConfig.w / 59); 
+	let particlesN = ~~(canvasConfig.w / 50); 
 
-	let collection = new ParticlesCollection( ctx, Math.max( particlesN, 9 ) );
-	requestAnimationFrame( collection.actionLoop.bind(collection) );
+	let collection = new ParticlesCollection( ctx, Math.max( particlesN, 0x0f ) );
+	collection.requestActionLoop();
+
+		/* CONTROLS */
+	let optionsContainer = document.querySelector(".options-list"),
+			optionsToggleBtn = document.querySelector(".options__toggle-btn");
+
+	optionsToggleBtn.addEventListener("click", evt => {
+		if ( evt.target.hasClass("open-btn") ) {
+			optionsContainer.classList.remove("hidden");
+			evt.target.classList.remove("open-btn");
+			evt.target.classList.add("close-btn");
+		} else {
+			optionsContainer.classList.add("hidden");
+			evt.target.classList.remove("close-btn");
+			evt.target.classList.add("open-btn");			
+		}
+	});		
+
+	let sliders = document.querySelectorAll(".slider");
+
+	let setSliderValue = (slider, val) => {
+		let thumb = slider.querySelector(".slider-thumb")
+
+		thumb.style.width = val + "%";
+
+		thumb.parentNode.value = ~~val * slider.step;
+		
+		let valueContainer = document.querySelector( thumb.parentNode.getAttribute("data-for") );
+		valueContainer.textContent = (~~val * slider.step).toFixed(2);
+
+		if (thumb.parentNode.oninput) {
+			thumb.parentNode.oninput.call(null, {
+				target: thumb.parentNode
+			});
+		}	
+	} 
+
+	for (let i = 0; i < sliders.length; i++) {	// init sliders
+		sliders[i].value = 0;
+		sliders[i].step = sliders[i].getAttribute("step");
+
+		sliders[i].addEventListener("mousedown", evt => {
+			if (evt.buttons !== 1) return false;
+
+			let target = evt.target;
+
+			if ( target.hasClass("slider-thumb") ) {
+				target = target.parentNode;
+			}
+
+			let onePercentValue = target.offsetWidth / 100;
+
+			setSliderValue(target, evt.offsetX / onePercentValue);
+
+			window.onmousemove = evt => {
+				let val = (evt.clientX - 
+									 optionsContainer.getBoundingClientRect().left - 
+									 target.offsetLeft) / onePercentValue;
+
+				if (val < 0) {
+					val = 0;
+				} else if (val > 100) {
+					val = 100;
+				}
+
+				setSliderValue(target, val);
+			}
+
+			window.addEventListener("mouseup", () => {
+				window.onmousemove = null;
+			});
+		});
+	}
+
+	let numberInput = document.querySelector(".options-list__number-input"),
+			colorInput = document.querySelector(".options-list__color-input"),
+			rainbowCheckbox = document.querySelector(".options-list__rainbow"),
+			radiusInput = document.querySelector(".options-list__radius-input"),
+			distanceInput = document.querySelector(".options-list__distance-input"),
+			speedInput = document.querySelector(".options-list__speed-input"),
+			lineWidthInput = document.querySelector(".options-list__line-width-input"),
+			lineColorInput = document.querySelector(".options-list__line-color-input");
+
+	let hexRegExp = /#([0-9A-F]{2}){3}/i;
+
+	setSliderValue(numberInput, collection.length / numberInput.step);
+	colorInput.value = particleConfig.colors[0];
+	rainbowCheckbox.checked = false;
+	setSliderValue( radiusInput, particleConfig.maxR * (1 / radiusInput.step) );
+	setSliderValue(distanceInput, collection.pbd / distanceInput.step);
+	setSliderValue(speedInput, particleConfig.maxS);
+	setSliderValue( lineWidthInput, particleConfig.lw * (1 / lineWidthInput.step) );
+	lineColorInput.value = particleConfig.lc;
+
+	numberInput.oninput = evt => {
+		collection.length = evt.target.value;
+		collection.reset();
+	};
+
+	colorInput.addEventListener("input", evt => {
+		if ( hexRegExp.test(evt.target.value) ) {
+			particleConfig.colors[0] = evt.target.value;
+			collection.reset();
+		}
+	});
+
+	rainbowCheckbox.addEventListener("input", evt => {
+		if (evt.target.checked) {
+			colorInput.disabled = true;
+			particleConfig.colors = rainbowColors.slice();
+			collection.reset();
+		} else {
+			colorInput.disabled = false;
+			particleConfig.colors.length = 1;
+			particleConfig.colors[0] = "#FFFFFF";
+			colorInput.value = "#FFFFFF";
+			collection.reset();
+		}
+	});
+
+	radiusInput.oninput = evt => {
+		particleConfig.maxR = evt.target.value;
+		collection.reset();	
+	}
+
+	distanceInput.oninput = evt => {
+		collection.pbd = evt.target.value;
+	}
+
+	speedInput.oninput = evt => {
+		particleConfig.maxS = evt.target.value;
+		collection.reset();
+	}
+
+	lineWidthInput.oninput = evt => {
+		particleConfig.lw = evt.target.value;
+	}
+
+	lineColorInput.addEventListener("input", evt => {
+		if ( hexRegExp.test(evt.target.value) ) {
+			particleConfig.lc = evt.target.value;
+		}
+	});
+		/* -------- */
 });
 
 console.timeEnd("Execution time: ");

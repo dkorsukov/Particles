@@ -14,7 +14,56 @@
 </head>
 <body>
 	<div class="page-wrapper">
-
+		<div class="options">
+			<button class="options__toggle-btn open-btn"></button>
+			<div class="options-list hidden">
+				<div class="options-list__option">
+					<p class="option-name">Number: </p>
+					<div class="options-list__number-input slider" step="3" value="0" data-for=".number-value">
+						<div class="slider-thumb"></div>
+					</div>
+					<p class="option-value number-value">0</p>
+				</div>	
+				<div class="options-list__option">
+					<p class="option-name">Color(HEX): </p>
+					<input type="text" class="options-list__color-input" value="#" maxlength="7">
+					<p class="option-name">Rainbow: </p>
+					<input type="checkbox" class="options-list__rainbow">
+				</div>
+				<div class="options-list__option">
+					<p class="option-name">Max radius: </p>
+					<div class="options-list__radius-input slider" step="0.5" data-for=".radius-value">
+						<div class="slider-thumb"></div>
+					</div>
+					<p class="option-value radius-value">0</p>
+				</div>
+				<div class="options-list__option">
+					<p class="option-name">Bind distance: </p>
+					<div class="options-list__distance-input slider" step="10" data-for=".distance-value">
+						<div class="slider-thumb"></div>
+					</div>
+					<p class="option-value distance-value">0</p>
+				</div>
+				<div class="options-list__option">
+					<p class="option-name">Max speed: </p>
+					<div class="options-list__speed-input slider" step="0.5" data-for=".speed-value">
+						<div class="slider-thumb"></div>
+					</div>
+					<p class="option-value speed-value">0</p>
+				</div>
+				<div class="options-list__option">
+					<p class="option-name">Line width: </p>
+					<div class="options-list__line-width-input slider" step="0.01" data-for=".line-width-value">
+						<div class="slider-thumb"></div>
+					</div>
+					<p class="option-value line-width-value">0</p>
+				</div>
+				<div class="options-list__option">
+					<p class="option-name">Line color: </p>
+					<input type="text" class="options-list__line-color-input" value="#" maxlength="7">
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<script src="js/main.js" defer></script>
