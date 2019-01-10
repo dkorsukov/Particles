@@ -59,7 +59,7 @@ body {
 
 .slider {
 	position: relative;
-	width: 150px;
+	width: 125px;
 	height: 20px;
 	background-color: #828282;
 	cursor: w-resize;
@@ -84,13 +84,13 @@ body {
 }
 
 .option-value {
-	width: 40px;
+	width: 60px;
 	text-align: center;
 }
 
 .options-list {
 	width: 100%;
-	padding: 0.5rem;
+	padding: 0.25rem;
 	margin-top: 3rem;
 	border-radius: 0.2rem;
 	background-color: #181818;
