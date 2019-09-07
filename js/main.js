@@ -146,8 +146,8 @@ window.addEventListener("load", () => {
 
 			this.area = area;
 
-			this.ispeed = speed;	// initial speed
-			this.speed = speed;
+			this.ispeed = Math.min(speed, maxSpeed);	// initial speed
+			this.speed = Math.min(speed, maxSpeed);
 			this.maxSpeed = maxSpeed;
 			this.acceleration = acceleration;
 			
