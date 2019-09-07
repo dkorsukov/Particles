@@ -2,4 +2,4 @@
 Particles on a Canvas, pure JavaScript
 
 # DEMO
-https://zilfaron.github.io/Particles/index.html
+https://dkorsukov.github.io/Particles/index.html
